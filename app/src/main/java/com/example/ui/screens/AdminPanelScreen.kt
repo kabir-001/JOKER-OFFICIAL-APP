@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.NoteAdd
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Edit
@@ -80,6 +81,7 @@ fun AdminPanelScreen(
   supportConfig: SupportConfig,
   isSaving: Boolean,
   onCreatePaper: () -> Unit,
+  onUploadPdfPaper: () -> Unit = {},
   onEditPaper: (TargetPaper) -> Unit,
   onDuplicatePaper: (TargetPaper) -> Unit,
   onToggleStatus: (TargetPaper) -> Unit,
@@ -149,6 +151,7 @@ fun AdminPanelScreen(
         AdminPapersListSection(
           adminPapersState = adminPapersState,
           onCreatePaper = onCreatePaper,
+          onUploadPdfPaper = onUploadPdfPaper,
           onEditPaper = onEditPaper,
           onDuplicatePaper = onDuplicatePaper,
           onToggleStatus = onToggleStatus,
@@ -169,6 +172,7 @@ fun AdminPanelScreen(
 private fun AdminPapersListSection(
   adminPapersState: UiState<List<TargetPaper>>,
   onCreatePaper: () -> Unit,
+  onUploadPdfPaper: () -> Unit,
   onEditPaper: (TargetPaper) -> Unit,
   onDuplicatePaper: (TargetPaper) -> Unit,
   onToggleStatus: (TargetPaper) -> Unit,
@@ -184,17 +188,31 @@ private fun AdminPapersListSection(
     verticalArrangement = Arrangement.spacedBy(12.dp),
   ) {
     item {
-      Button(
-        onClick = onCreatePaper,
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier
-          .fillMaxWidth()
-          .height(54.dp)
-          .testTag("admin_create_paper_button"),
-      ) {
-        Icon(Icons.AutoMirrored.Rounded.NoteAdd, contentDescription = null, modifier = Modifier.size(20.dp))
-        Spacer(modifier = Modifier.width(8.dp))
-        Text("Create & Upload Target Paper", style = MaterialTheme.typography.labelLarge)
+      Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(
+          onClick = onUploadPdfPaper,
+          shape = RoundedCornerShape(16.dp),
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(54.dp)
+            .testTag("admin_upload_pdf_button"),
+        ) {
+          Icon(Icons.Rounded.PictureAsPdf, contentDescription = null, modifier = Modifier.size(20.dp))
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Upload PDF Target Paper", style = MaterialTheme.typography.labelLarge)
+        }
+        OutlinedButton(
+          onClick = onCreatePaper,
+          shape = RoundedCornerShape(16.dp),
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .testTag("admin_create_paper_button"),
+        ) {
+          Icon(Icons.AutoMirrored.Rounded.NoteAdd, contentDescription = null, modifier = Modifier.size(20.dp))
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Build Structured Question Paper", style = MaterialTheme.typography.labelLarge)
+        }
       }
     }
 
@@ -366,7 +384,12 @@ private fun AdminPapersListSection(
                 )
 
                 Text(
-                  text = "${paper.sections.size} sections • ${paper.totalQuestionCount} questions • ${paper.totalMarks} marks",
+                  text = buildString {
+                    if (paper.hasEmbeddedPdf || paper.pdfFileName.isNotBlank()) {
+                      append("PDF: ${paper.pdfFileName.ifBlank { "Attached" }} • ")
+                    }
+                    append("${paper.sections.size} sections • ${paper.totalQuestionCount} questions • ${paper.totalMarks} marks")
+                  },
                   style = MaterialTheme.typography.bodySmall,
                   color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

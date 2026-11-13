@@ -5,75 +5,27 @@
       "description": "An exam target paper created and published by the admin, containing structured sections and questions for students to view and download offline.",
       "type": "object",
       "properties": {
-        "title": {
-          "type": "string",
-          "description": "Display title of the target paper"
-        },
-        "subject": {
-          "type": "string",
-          "description": "Academic subject name (e.g. Physics, Mathematics)"
-        },
-        "classLevel": {
-          "type": "string",
-          "description": "Class, grade, or exam level (e.g. 10th Class, MDCAT)"
-        },
-        "examTerm": {
-          "type": "string",
-          "description": "Exam session or term (e.g. Annual Board 2026)"
-        },
-        "totalMarks": {
-          "type": "integer",
-          "description": "Total marks for the paper"
-        },
-        "durationText": {
-          "type": "string",
-          "description": "Allowed exam duration label"
-        },
-        "instructions": {
-          "type": "string",
-          "description": "General exam instructions for students"
-        },
-        "externalPdfUrl": {
-          "type": "string",
-          "description": "Optional external PDF or resource URL"
-        },
-        "sections": {
-          "type": "array",
-          "description": "Structured exam sections containing questions"
-        },
-        "status": {
-          "type": "string",
-          "enum": ["published", "draft"],
-          "description": "Publication visibility status"
-        },
-        "createdByUid": {
-          "type": "string",
-          "description": "Firebase UID of the admin who created the paper"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server creation timestamp written via FieldValue.serverTimestamp()"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server update timestamp written via FieldValue.serverTimestamp()"
-        }
+        "title": { "type": "string", "description": "Display title of the target paper" },
+        "subject": { "type": "string", "description": "Academic subject name" },
+        "classLevel": { "type": "string", "description": "Class, grade, or exam level" },
+        "examTerm": { "type": "string", "description": "Exam session or term" },
+        "totalMarks": { "type": "integer", "description": "Total marks for the paper" },
+        "durationText": { "type": "string", "description": "Allowed exam duration label" },
+        "instructions": { "type": "string", "description": "General exam instructions or description for students" },
+        "externalPdfUrl": { "type": "string", "description": "Optional external PDF or resource URL" },
+        "pdfFileName": { "type": "string", "description": "Optional uploaded PDF filename" },
+        "pdfSizeBytes": { "type": "integer", "description": "Optional uploaded PDF size in bytes" },
+        "pdfPageCount": { "type": "integer", "description": "Optional page count of uploaded PDF" },
+        "pdfBase64": { "type": "string", "description": "Optional inline Base64-encoded PDF payload for direct offline study" },
+        "sections": { "type": "array", "description": "Structured exam sections containing questions" },
+        "status": { "type": "string", "enum": ["published", "draft"], "description": "Publication visibility status" },
+        "createdByUid": { "type": "string", "description": "Firebase UID of the admin who created the paper" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp written via FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp written via FieldValue.serverTimestamp()" }
       },
       "required": [
-        "title",
-        "subject",
-        "classLevel",
-        "examTerm",
-        "totalMarks",
-        "durationText",
-        "instructions",
-        "sections",
-        "status",
-        "createdByUid",
-        "createdAt",
-        "updatedAt"
+        "title", "subject", "classLevel", "examTerm", "totalMarks", "durationText",
+        "instructions", "sections", "status", "createdByUid", "createdAt", "updatedAt"
       ]
     },
     "SupportConfig": {
@@ -81,60 +33,21 @@
       "description": "Admin-managed WhatsApp channel link and clickable helpline phone numbers displayed to all students.",
       "type": "object",
       "properties": {
-        "isPublic": {
-          "type": "boolean",
-          "description": "Whether the support configuration is visible to signed-in students"
-        },
-        "whatsappChannelName": {
-          "type": "string",
-          "description": "Display name of the WhatsApp Channel"
-        },
-        "whatsappChannelUrl": {
-          "type": "string",
-          "description": "Clickable HTTPS URL of the WhatsApp Channel"
-        },
-        "sscGroupName": {
-          "type": "string",
-          "description": "Display name of the SSC (IX/X) WhatsApp session group"
-        },
-        "sscGroupUrl": {
-          "type": "string",
-          "description": "Clickable invite link for the SSC (IX/X) WhatsApp session group"
-        },
-        "hscGroupName": {
-          "type": "string",
-          "description": "Display name of the HSC (XI/XII) WhatsApp session group"
-        },
-        "hscGroupUrl": {
-          "type": "string",
-          "description": "Clickable invite link for the HSC (XI/XII) WhatsApp session group"
-        },
-        "supportNote": {
-          "type": "string",
-          "description": "Helpful message shown above support numbers"
-        },
-        "helpContacts": {
-          "type": "array",
-          "description": "List of clickable help phone contact entries"
-        },
-        "updatedByUid": {
-          "type": "string",
-          "description": "Firebase UID of the admin who last updated support settings"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server update timestamp written via FieldValue.serverTimestamp()"
-        }
+        "isPublic": { "type": "boolean" },
+        "whatsappChannelName": { "type": "string" },
+        "whatsappChannelUrl": { "type": "string" },
+        "sscGroupName": { "type": "string" },
+        "sscGroupUrl": { "type": "string" },
+        "hscGroupName": { "type": "string" },
+        "hscGroupUrl": { "type": "string" },
+        "supportNote": { "type": "string" },
+        "helpContacts": { "type": "array" },
+        "updatedByUid": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": [
-        "isPublic",
-        "whatsappChannelName",
-        "whatsappChannelUrl",
-        "supportNote",
-        "helpContacts",
-        "updatedByUid",
-        "updatedAt"
+        "isPublic", "whatsappChannelName", "whatsappChannelUrl",
+        "supportNote", "helpContacts", "updatedByUid", "updatedAt"
       ]
     },
     "AdminEntry": {
@@ -142,51 +55,170 @@
       "description": "Trusted admin role record managed by the bootstrapped owner.",
       "type": "object",
       "properties": {
-        "uid": {
-          "type": "string",
-          "description": "Admin Firebase UID"
-        },
-        "email": {
-          "type": "string",
-          "description": "Admin email address"
-        },
-        "addedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server timestamp when admin entry was created"
-        }
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "addedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "addedAt"]
     },
     "UserProfile": {
       "title": "UserProfile",
-      "description": "Student user preferences stored privately per authenticated user.",
+      "description": "Private user preferences, claimed username, and E2EE public key metadata.",
       "type": "object",
       "properties": {
-        "userId": {
-          "type": "string",
-          "description": "Authenticated user UID"
-        },
-        "displayName": {
-          "type": "string",
-          "description": "User display name"
-        },
-        "preferredClass": {
-          "type": "string",
-          "description": "Preferred class filter"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server creation timestamp"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "Server update timestamp"
-        }
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "preferredClass": { "type": "string" },
+        "username": { "type": "string" },
+        "e2eePublicKey": { "type": "string" },
+        "keyFingerprint": { "type": "string" },
+        "lowDataMode": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "displayName", "createdAt", "updatedAt"]
+    },
+    "UsernameRecord": {
+      "title": "UsernameRecord",
+      "description": "Privacy-first username handle mapping to E2EE ECDH public key with zero phone numbers or emails.",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "uid": { "type": "string" },
+        "publicKeyBase64": { "type": "string" },
+        "keyFingerprint": { "type": "string" },
+        "roleLabel": { "type": "string", "enum": ["admin", "student"] },
+        "bio": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["username", "uid", "publicKeyBase64", "keyFingerprint", "roleLabel", "createdAt", "updatedAt"]
+    },
+    "DmThread": {
+      "title": "DmThread",
+      "description": "Private 1-to-1 end-to-end encrypted chat thread between two usernames.",
+      "type": "object",
+      "properties": {
+        "participantUids": { "type": "array" },
+        "participantUsernames": { "type": "array" },
+        "participantPublicKeys": { "type": "array" },
+        "lastMessageCiphertext": { "type": "string" },
+        "lastMessageIv": { "type": "string" },
+        "lastSenderUsername": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "participantUids", "participantUsernames", "participantPublicKeys",
+        "lastMessageCiphertext", "lastMessageIv", "lastSenderUsername", "createdAt", "updatedAt"
+      ]
+    },
+    "DmMessage": {
+      "title": "DmMessage",
+      "description": "End-to-end encrypted direct message payload sealed with AES-256-GCM over ECDH.",
+      "type": "object",
+      "properties": {
+        "threadId": { "type": "string" },
+        "participantUids": { "type": "array" },
+        "senderUid": { "type": "string" },
+        "senderUsername": { "type": "string" },
+        "senderPublicKey": { "type": "string" },
+        "recipientPublicKey": { "type": "string" },
+        "ciphertextBase64": { "type": "string" },
+        "ivBase64": { "type": "string" },
+        "payloadType": { "type": "string", "enum": ["text", "image"] },
+        "approxBytes": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "threadId", "participantUids", "senderUid", "senderUsername",
+        "senderPublicKey", "recipientPublicKey", "ciphertextBase64", "ivBase64",
+        "payloadType", "approxBytes", "createdAt"
+      ]
+    },
+    "CommunityRoom": {
+      "title": "CommunityRoom",
+      "description": "Anonymous E2EE WhatsApp-style Channel or Group exposing only follower/member counts and encrypted posts.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "roomType": { "type": "string", "enum": ["channel", "group"] },
+        "category": { "type": "string" },
+        "isPublic": { "type": "boolean" },
+        "adminsOnlyPosting": { "type": "boolean" },
+        "memberCount": { "type": "integer" },
+        "roomKeyEnvelope": { "type": "string" },
+        "roomFingerprint": { "type": "string" },
+        "lastPostCiphertext": { "type": "string" },
+        "lastPostIv": { "type": "string" },
+        "lastPostAlias": { "type": "string" },
+        "createdByUid": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "title", "description", "roomType", "category", "isPublic", "adminsOnlyPosting",
+        "memberCount", "roomKeyEnvelope", "roomFingerprint", "createdByUid", "createdAt", "updatedAt"
+      ]
+    },
+    "RoomMembership": {
+      "title": "RoomMembership",
+      "description": "Private anonymous membership marker readable only by its owner so member identities remain completely hidden.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "joinedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "joinedAt"]
+    },
+    "RoomMessage": {
+      "title": "RoomMessage",
+      "description": "AES-256-GCM encrypted message inside a community Group or Channel using anonymous member aliases.",
+      "type": "object",
+      "properties": {
+        "roomId": { "type": "string" },
+        "isPublicRoom": { "type": "boolean" },
+        "senderUid": { "type": "string" },
+        "senderAlias": { "type": "string" },
+        "isAdminPost": { "type": "boolean" },
+        "ciphertextBase64": { "type": "string" },
+        "ivBase64": { "type": "string" },
+        "payloadType": { "type": "string", "enum": ["text", "image"] },
+        "approxBytes": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "roomId", "isPublicRoom", "senderUid", "senderAlias", "isAdminPost",
+        "ciphertextBase64", "ivBase64", "payloadType", "approxBytes", "createdAt"
+      ]
+    },
+    "StatusUpdate": {
+      "title": "StatusUpdate",
+      "description": "24-hour end-to-end encrypted Status update for Joker Official broadcasts or private username contacts.",
+      "type": "object",
+      "properties": {
+        "authorUid": { "type": "string" },
+        "authorLabel": { "type": "string" },
+        "isOfficialBroadcast": { "type": "boolean" },
+        "isPublic": { "type": "boolean" },
+        "allowedUids": { "type": "array" },
+        "wrappedKeys": { "type": "array" },
+        "authorPublicKey": { "type": "string" },
+        "ciphertextBase64": { "type": "string" },
+        "ivBase64": { "type": "string" },
+        "accentHex": { "type": "string" },
+        "hasImage": { "type": "boolean" },
+        "approxBytes": { "type": "integer" },
+        "viewCount": { "type": "integer" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "authorUid", "authorLabel", "isOfficialBroadcast", "isPublic", "allowedUids",
+        "wrappedKeys", "authorPublicKey", "ciphertextBase64", "ivBase64", "accentHex",
+        "hasImage", "approxBytes", "viewCount", "expiresAt", "createdAt"
+      ]
     }
   },
   "firestore": {
@@ -204,7 +236,35 @@
     },
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/UserProfile" },
-      "description": "Per-user profile and study preferences."
+      "description": "Per-user private profile, username, and E2EE public key cache."
+    },
+    "/usernames/{username}": {
+      "schema": { "$ref": "#/entities/UsernameRecord" },
+      "description": "Exact-lookup username directory storing E2EE public keys without phone numbers or emails."
+    },
+    "/dm_threads/{threadId}": {
+      "schema": { "$ref": "#/entities/DmThread" },
+      "description": "Private 1-on-1 E2EE conversation headers between two participants."
+    },
+    "/dm_threads/{threadId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/DmMessage" },
+      "description": "Encrypted messages within a private DM thread."
+    },
+    "/community_rooms/{roomId}": {
+      "schema": { "$ref": "#/entities/CommunityRoom" },
+      "description": "Anonymous E2EE channels and study groups showing follower/member counts only."
+    },
+    "/community_rooms/{roomId}/memberships/{memberUid}": {
+      "schema": { "$ref": "#/entities/RoomMembership" },
+      "description": "Owner-private membership documents preventing member list exposure."
+    },
+    "/community_rooms/{roomId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/RoomMessage" },
+      "description": "Encrypted messages and broadcasts posted inside community rooms."
+    },
+    "/status_updates/{statusId}": {
+      "schema": { "$ref": "#/entities/StatusUpdate" },
+      "description": "24-hour E2EE status updates for official broadcasts or username contacts."
     }
   }
 }

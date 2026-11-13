@@ -2,17 +2,23 @@ package com.example.auth
 
 import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.util.Log
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.GetCredentialProviderConfigurationException
+import androidx.credentials.exceptions.GetCredentialUnsupportedException
+import androidx.credentials.exceptions.NoCredentialException
 import com.example.R
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential.Companion.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -28,6 +34,12 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 private const val TAG = "AuthHelper"
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+  is Activity -> this
+  is ContextWrapper -> baseContext.findActivity()
+  else -> null
+}
 
 fun FirebaseAuth.authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
   val listener = FirebaseAuth.AuthStateListener { auth ->
@@ -67,7 +79,8 @@ fun attemptAutoSignIn(
 
   scope.launch {
     try {
-      val result = credentialManager.getCredential(context, request)
+      val hostContext = context.findActivity() ?: context
+      val result = credentialManager.getCredential(hostContext, request)
       val credential = result.credential
       if (credential is CustomCredential && credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
         val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
@@ -105,8 +118,8 @@ fun onGoogleSignInClicked(
 
   scope.launch {
     try {
-      val activityContext = context as? Activity ?: context
-      val result = credentialManager.getCredential(activityContext, request)
+      val hostContext = context.findActivity() ?: context
+      val result = credentialManager.getCredential(hostContext, request)
       val credential = result.credential
       if (credential is CustomCredential && credential.type == TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
         val googleIdToken = GoogleIdTokenCredential.createFrom(credential.data).idToken
@@ -119,6 +132,21 @@ fun onGoogleSignInClicked(
     } catch (e: GetCredentialCancellationException) {
       Log.w(TAG, "Google Sign-In cancelled or dismissed: ${e.message}", e)
       onAuthCancelled()
+    } catch (e: NoCredentialException) {
+      Log.w(TAG, "No Google credentials found on device: ${e.message}", e)
+      onAuthError("No Google account found on this device. Please add a Google account in device Settings and try again.")
+    } catch (e: GetCredentialProviderConfigurationException) {
+      Log.e(TAG, "Google Credential Provider configuration error", e)
+      onAuthError("Google Play Services credential provider is unavailable or outdated on this device.")
+    } catch (e: GetCredentialUnsupportedException) {
+      Log.e(TAG, "Credential Manager unsupported on device", e)
+      onAuthError("Google Sign-In requires Google Play Services enabled on this device.")
+    } catch (e: GoogleIdTokenParsingException) {
+      Log.e(TAG, "Invalid Google ID token response", e)
+      onAuthError("Received an invalid Google Sign-In token. Please try again.")
+    } catch (e: GetCredentialException) {
+      Log.e(TAG, "Google Sign-In credential error: ${e.type}", e)
+      onAuthError(e.localizedMessage ?: "Google Sign-In failed. Please try again.")
     } catch (e: Exception) {
       Log.e(TAG, "Google Sign-In failed", e)
       onAuthError(e.localizedMessage ?: "Sign-in failed. Please try again.")

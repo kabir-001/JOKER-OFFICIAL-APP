@@ -11,6 +11,10 @@ service cloud.firestore {
       return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
+    function isValidUsername(u) {
+      return u is string && u.size() >= 3 && u.size() <= 24 && u.matches('^[a-z0-9_]+$');
+    }
+
     function incoming() {
       return request.resource.data;
     }
@@ -43,7 +47,7 @@ service cloud.firestore {
       );
     }
 
-    // --- Entity Validation Helpers ---
+    // --- Existing Entity Validation Helpers ---
     function isValidTargetPaper(data) {
       return data.title is string && data.title.size() >= 2 && data.title.size() <= 140 &&
              data.subject is string && data.subject.size() >= 1 && data.subject.size() <= 60 &&
@@ -53,6 +57,10 @@ service cloud.firestore {
              data.durationText is string && data.durationText.size() <= 40 &&
              data.instructions is string && data.instructions.size() <= 1500 &&
              (!('externalPdfUrl' in data) || data.externalPdfUrl == null || (data.externalPdfUrl is string && data.externalPdfUrl.size() <= 500)) &&
+             (!('pdfFileName' in data) || data.pdfFileName == null || (data.pdfFileName is string && data.pdfFileName.size() <= 180)) &&
+             (!('pdfSizeBytes' in data) || data.pdfSizeBytes == null || (data.pdfSizeBytes is int && data.pdfSizeBytes >= 0 && data.pdfSizeBytes <= 52428800)) &&
+             (!('pdfPageCount' in data) || data.pdfPageCount == null || (data.pdfPageCount is int && data.pdfPageCount >= 0 && data.pdfPageCount <= 500)) &&
+             (!('pdfBase64' in data) || data.pdfBase64 == null || (data.pdfBase64 is string && data.pdfBase64.size() <= 850000)) &&
              data.sections is list && data.sections.size() <= 20 &&
              (data.sections.size() == 0 || (data.sections[0] is map && data.sections[0].heading is string && data.sections[0].heading.size() <= 120)) &&
              data.status in ['published', 'draft'] &&
@@ -90,8 +98,109 @@ service cloud.firestore {
       return data.userId is string && data.userId == userId &&
              data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
              (!('preferredClass' in data) || data.preferredClass == null || (data.preferredClass is string && data.preferredClass.size() <= 40)) &&
+             (!('username' in data) || data.username == null || data.username == '' || isValidUsername(data.username)) &&
+             (!('e2eePublicKey' in data) || data.e2eePublicKey == null || (data.e2eePublicKey is string && data.e2eePublicKey.size() <= 320)) &&
+             (!('keyFingerprint' in data) || data.keyFingerprint == null || (data.keyFingerprint is string && data.keyFingerprint.size() <= 48)) &&
+             (!('lowDataMode' in data) || data.lowDataMode is bool) &&
              data.createdAt is timestamp && data.createdAt <= request.time &&
              data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // --- New E2EE Community Validation Helpers ---
+    function isValidUsernameRecord(data, handle) {
+      return isValidUsername(handle) &&
+             data.username is string && data.username == handle &&
+             data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+             data.publicKeyBase64 is string && data.publicKeyBase64.size() >= 20 && data.publicKeyBase64.size() <= 320 &&
+             data.keyFingerprint is string && data.keyFingerprint.size() >= 4 && data.keyFingerprint.size() <= 48 &&
+             data.roleLabel in ['admin', 'student'] &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() <= 140)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidDmThread(data) {
+      return data.participantUids is list && data.participantUids.size() == 2 &&
+             data.participantUids[0] is string && data.participantUids[0].size() <= 128 &&
+             data.participantUids[1] is string && data.participantUids[1].size() <= 128 &&
+             data.participantUids[0] != data.participantUids[1] &&
+             data.participantUsernames is list && data.participantUsernames.size() == 2 &&
+             data.participantUsernames[0] is string && data.participantUsernames[0].size() <= 30 &&
+             data.participantUsernames[1] is string && data.participantUsernames[1].size() <= 30 &&
+             data.participantPublicKeys is list && data.participantPublicKeys.size() == 2 &&
+             data.participantPublicKeys[0] is string && data.participantPublicKeys[0].size() <= 320 &&
+             data.participantPublicKeys[1] is string && data.participantPublicKeys[1].size() <= 320 &&
+             data.lastMessageCiphertext is string && data.lastMessageCiphertext.size() <= 2048 &&
+             data.lastMessageIv is string && data.lastMessageIv.size() <= 64 &&
+             data.lastSenderUsername is string && data.lastSenderUsername.size() <= 30 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidDmMessage(data, threadId) {
+      return data.threadId is string && data.threadId == threadId &&
+             data.participantUids is list && data.participantUids.size() == 2 &&
+             data.participantUids[0] is string && data.participantUids[1] is string &&
+             data.senderUid is string && data.senderUid == request.auth.uid &&
+             data.senderUsername is string && data.senderUsername.size() >= 3 && data.senderUsername.size() <= 30 &&
+             data.senderPublicKey is string && data.senderPublicKey.size() >= 20 && data.senderPublicKey.size() <= 320 &&
+             data.recipientPublicKey is string && data.recipientPublicKey.size() >= 20 && data.recipientPublicKey.size() <= 320 &&
+             data.ciphertextBase64 is string && data.ciphertextBase64.size() >= 4 && data.ciphertextBase64.size() <= 140000 &&
+             data.ivBase64 is string && data.ivBase64.size() >= 4 && data.ivBase64.size() <= 64 &&
+             data.payloadType in ['text', 'image'] &&
+             data.approxBytes is int && data.approxBytes >= 0 && data.approxBytes <= 200000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidCommunityRoom(data) {
+      return data.title is string && data.title.size() >= 2 && data.title.size() <= 80 &&
+             data.description is string && data.description.size() <= 300 &&
+             data.roomType in ['channel', 'group'] &&
+             data.category is string && data.category.size() >= 1 && data.category.size() <= 40 &&
+             data.isPublic is bool &&
+             data.adminsOnlyPosting is bool &&
+             data.memberCount is int && data.memberCount >= 0 &&
+             data.roomKeyEnvelope is string && data.roomKeyEnvelope.size() >= 16 && data.roomKeyEnvelope.size() <= 320 &&
+             data.roomFingerprint is string && data.roomFingerprint.size() >= 4 && data.roomFingerprint.size() <= 48 &&
+             (!('lastPostCiphertext' in data) || (data.lastPostCiphertext is string && data.lastPostCiphertext.size() <= 2048)) &&
+             (!('lastPostIv' in data) || (data.lastPostIv is string && data.lastPostIv.size() <= 64)) &&
+             (!('lastPostAlias' in data) || (data.lastPostAlias is string && data.lastPostAlias.size() <= 40)) &&
+             data.createdByUid is string && data.createdByUid.size() >= 1 && data.createdByUid.size() <= 128 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidRoomMessage(data, roomId) {
+      return data.roomId is string && data.roomId == roomId &&
+             data.isPublicRoom is bool &&
+             data.senderUid is string && data.senderUid == request.auth.uid &&
+             data.senderAlias is string && data.senderAlias.size() >= 2 && data.senderAlias.size() <= 40 &&
+             data.isAdminPost is bool &&
+             data.ciphertextBase64 is string && data.ciphertextBase64.size() >= 4 && data.ciphertextBase64.size() <= 140000 &&
+             data.ivBase64 is string && data.ivBase64.size() >= 4 && data.ivBase64.size() <= 64 &&
+             data.payloadType in ['text', 'image'] &&
+             data.approxBytes is int && data.approxBytes >= 0 && data.approxBytes <= 200000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidStatusUpdate(data) {
+      return data.authorUid is string && data.authorUid.size() >= 1 && data.authorUid.size() <= 128 &&
+             data.authorLabel is string && data.authorLabel.size() >= 2 && data.authorLabel.size() <= 40 &&
+             data.isOfficialBroadcast is bool &&
+             data.isPublic is bool &&
+             data.allowedUids is list && data.allowedUids.size() <= 50 &&
+             (data.allowedUids.size() == 0 || data.allowedUids[0] is string) &&
+             data.wrappedKeys is list && data.wrappedKeys.size() <= 50 &&
+             (data.wrappedKeys.size() == 0 || data.wrappedKeys[0] is string) &&
+             data.authorPublicKey is string && data.authorPublicKey.size() >= 20 && data.authorPublicKey.size() <= 320 &&
+             data.ciphertextBase64 is string && data.ciphertextBase64.size() >= 4 && data.ciphertextBase64.size() <= 140000 &&
+             data.ivBase64 is string && data.ivBase64.size() >= 4 && data.ivBase64.size() <= 64 &&
+             data.accentHex is string && data.accentHex.size() >= 4 && data.accentHex.size() <= 16 &&
+             data.hasImage is bool &&
+             data.approxBytes is int && data.approxBytes >= 0 && data.approxBytes <= 200000 &&
+             data.viewCount is int && data.viewCount >= 0 &&
+             data.expiresAt is timestamp &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
     }
 
     // --- Collection Rules ---
@@ -110,8 +219,9 @@ service cloud.firestore {
                        ]) &&
                        incoming().keys().hasOnly([
                          'title', 'subject', 'classLevel', 'examTerm', 'totalMarks',
-                         'durationText', 'instructions', 'externalPdfUrl', 'sections',
-                         'status', 'createdByUid', 'createdAt', 'updatedAt'
+                         'durationText', 'instructions', 'externalPdfUrl',
+                         'pdfFileName', 'pdfSizeBytes', 'pdfPageCount', 'pdfBase64',
+                         'sections', 'status', 'createdByUid', 'createdAt', 'updatedAt'
                        ]);
 
       allow update: if isAdmin() &&
@@ -121,8 +231,9 @@ service cloud.firestore {
                        incoming().createdAt == existing().createdAt &&
                        incoming().diff(existing()).affectedKeys().hasOnly([
                          'title', 'subject', 'classLevel', 'examTerm', 'totalMarks',
-                         'durationText', 'instructions', 'externalPdfUrl', 'sections',
-                         'status', 'updatedAt'
+                         'durationText', 'instructions', 'externalPdfUrl',
+                         'pdfFileName', 'pdfSizeBytes', 'pdfPageCount', 'pdfBase64',
+                         'sections', 'status', 'updatedAt'
                        ]);
 
       allow delete: if isAdmin() && isValidId(paperId);
@@ -188,7 +299,10 @@ service cloud.firestore {
                        request.auth.uid == userId &&
                        isValidUserProfile(incoming(), userId) &&
                        incoming().keys().hasAll(['userId', 'displayName', 'createdAt', 'updatedAt']) &&
-                       incoming().keys().hasOnly(['userId', 'displayName', 'preferredClass', 'createdAt', 'updatedAt']);
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'preferredClass', 'username',
+                         'e2eePublicKey', 'keyFingerprint', 'lowDataMode', 'createdAt', 'updatedAt'
+                       ]);
 
       allow update: if isSignedIn() &&
                        isValidId(userId) &&
@@ -196,9 +310,265 @@ service cloud.firestore {
                        isValidUserProfile(incoming(), userId) &&
                        incoming().userId == existing().userId &&
                        incoming().createdAt == existing().createdAt &&
-                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'preferredClass', 'updatedAt']);
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'preferredClass', 'username',
+                         'e2eePublicKey', 'keyFingerprint', 'lowDataMode', 'updatedAt'
+                       ]);
 
       allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    // Username registry: exact lookup allowed by handle, ONLY official admin handles queryable via list (no student scraping!)
+    match /usernames/{username} {
+      allow get: if isSignedIn() && isValidUsername(username);
+      allow list: if isSignedIn() && existing().roleLabel == 'admin';
+
+      allow create: if isSignedIn() &&
+                       isValidUsernameRecord(incoming(), username) &&
+                       incoming().uid == request.auth.uid &&
+                       (incoming().roleLabel == 'student' || isAdmin()) &&
+                       incoming().keys().hasAll([
+                         'username', 'uid', 'publicKeyBase64', 'keyFingerprint',
+                         'roleLabel', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'username', 'uid', 'publicKeyBase64', 'keyFingerprint',
+                         'roleLabel', 'bio', 'createdAt', 'updatedAt'
+                       ]);
+
+      allow update: if isSignedIn() &&
+                       isValidUsernameRecord(incoming(), username) &&
+                       existing().uid == request.auth.uid &&
+                       incoming().uid == existing().uid &&
+                       incoming().username == existing().username &&
+                       incoming().createdAt == existing().createdAt &&
+                       (incoming().roleLabel == existing().roleLabel || isAdmin()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'publicKeyBase64', 'keyFingerprint', 'roleLabel', 'bio', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidUsername(username) && (existing().uid == request.auth.uid || isAdmin());
+    }
+
+    // Private Username-to-Username E2EE DM threads
+    match /dm_threads/{threadId} {
+      allow get: if isSignedIn() && isValidId(threadId) && (resource == null || request.auth.uid in existing().participantUids);
+      allow list: if isSignedIn() && request.auth.uid in existing().participantUids;
+
+      allow create: if isSignedIn() &&
+                       isValidId(threadId) &&
+                       request.auth.uid in incoming().participantUids &&
+                       isValidDmThread(incoming()) &&
+                       incoming().keys().hasAll([
+                         'participantUids', 'participantUsernames', 'participantPublicKeys',
+                         'lastMessageCiphertext', 'lastMessageIv', 'lastSenderUsername',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'participantUids', 'participantUsernames', 'participantPublicKeys',
+                         'lastMessageCiphertext', 'lastMessageIv', 'lastSenderUsername',
+                         'createdAt', 'updatedAt'
+                       ]);
+
+      allow update: if isSignedIn() &&
+                       isValidId(threadId) &&
+                       request.auth.uid in existing().participantUids &&
+                       isValidDmThread(incoming()) &&
+                       incoming().participantUids == existing().participantUids &&
+                       incoming().participantUsernames == existing().participantUsernames &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'participantPublicKeys', 'lastMessageCiphertext',
+                         'lastMessageIv', 'lastSenderUsername', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidId(threadId) && (request.auth.uid in existing().participantUids || isAdmin());
+
+      match /messages/{messageId} {
+        allow get: if isSignedIn() && isValidId(threadId) && isValidId(messageId) && request.auth.uid in existing().participantUids;
+        allow list: if isSignedIn() && request.auth.uid in existing().participantUids;
+
+        allow create: if isSignedIn() &&
+                         isValidId(threadId) &&
+                         isValidId(messageId) &&
+                         request.auth.uid in incoming().participantUids &&
+                         isValidDmMessage(incoming(), threadId) &&
+                         (
+                           exists(/databases/$(database)/documents/dm_threads/$(threadId)) ||
+                           existsAfter(/databases/$(database)/documents/dm_threads/$(threadId))
+                         ) &&
+                         incoming().keys().hasAll([
+                           'threadId', 'participantUids', 'senderUid', 'senderUsername',
+                           'senderPublicKey', 'recipientPublicKey', 'ciphertextBase64',
+                           'ivBase64', 'payloadType', 'approxBytes', 'createdAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'threadId', 'participantUids', 'senderUid', 'senderUsername',
+                           'senderPublicKey', 'recipientPublicKey', 'ciphertextBase64',
+                           'ivBase64', 'payloadType', 'approxBytes', 'createdAt'
+                         ]);
+
+        allow update: if false;
+        allow delete: if isSignedIn() && isValidId(threadId) && isValidId(messageId) && (existing().senderUid == request.auth.uid || request.auth.uid in existing().participantUids);
+      }
+    }
+
+    // Anonymous E2EE Channels & Groups
+    match /community_rooms/{roomId} {
+      allow get: if isSignedIn() && isValidId(roomId) && (existing().isPublic == true || isAdmin());
+      allow list: if isSignedIn() && (existing().isPublic == true || isBootstrappedAdmin());
+
+      allow create: if isAdmin() &&
+                       isValidId(roomId) &&
+                       isValidCommunityRoom(incoming()) &&
+                       incoming().createdByUid == request.auth.uid &&
+                       incoming().memberCount == 0 &&
+                       incoming().keys().hasAll([
+                         'title', 'description', 'roomType', 'category', 'isPublic',
+                         'adminsOnlyPosting', 'memberCount', 'roomKeyEnvelope',
+                         'roomFingerprint', 'createdByUid', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'title', 'description', 'roomType', 'category', 'isPublic',
+                         'adminsOnlyPosting', 'memberCount', 'roomKeyEnvelope',
+                         'roomFingerprint', 'lastPostCiphertext', 'lastPostIv',
+                         'lastPostAlias', 'createdByUid', 'createdAt', 'updatedAt'
+                       ]);
+
+      allow update: if isSignedIn() &&
+                       isValidId(roomId) &&
+                       isValidCommunityRoom(incoming()) &&
+                       incoming().createdByUid == existing().createdByUid &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().roomType == existing().roomType && (
+                         (
+                           isAdmin() &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'title', 'description', 'category', 'isPublic',
+                             'adminsOnlyPosting', 'memberCount', 'lastPostCiphertext',
+                             'lastPostIv', 'lastPostAlias', 'updatedAt'
+                           ])
+                         ) || (
+                           // Atomic anonymous join (+1 follower/member)
+                           incoming().diff(existing()).affectedKeys().hasOnly(['memberCount', 'updatedAt']) &&
+                           incoming().memberCount == existing().memberCount + 1 &&
+                           !exists(/databases/$(database)/documents/community_rooms/$(roomId)/memberships/$(request.auth.uid)) &&
+                           existsAfter(/databases/$(database)/documents/community_rooms/$(roomId)/memberships/$(request.auth.uid))
+                         ) || (
+                           // Atomic anonymous leave (-1 follower/member)
+                           incoming().diff(existing()).affectedKeys().hasOnly(['memberCount', 'updatedAt']) &&
+                           incoming().memberCount == existing().memberCount - 1 &&
+                           incoming().memberCount >= 0 &&
+                           exists(/databases/$(database)/documents/community_rooms/$(roomId)/memberships/$(request.auth.uid)) &&
+                           !existsAfter(/databases/$(database)/documents/community_rooms/$(roomId)/memberships/$(request.auth.uid))
+                         ) || (
+                           // Member updating encrypted lastPost preview inside an unlocked group
+                           existing().roomType == 'group' &&
+                           existing().adminsOnlyPosting == false &&
+                           exists(/databases/$(database)/documents/community_rooms/$(roomId)/memberships/$(request.auth.uid)) &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'lastPostCiphertext', 'lastPostIv', 'lastPostAlias', 'updatedAt'
+                           ])
+                         )
+                       );
+
+      allow delete: if isAdmin() && isValidId(roomId);
+
+      // Owner-private membership marker: NEVER listable so member identities remain 100% hidden!
+      match /memberships/{memberUid} {
+        allow get: if isSignedIn() && isValidId(roomId) && isValidId(memberUid) && request.auth.uid == memberUid;
+        allow list: if false;
+
+        allow create: if isSignedIn() &&
+                         isValidId(roomId) &&
+                         isValidId(memberUid) &&
+                         request.auth.uid == memberUid &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().joinedAt is timestamp &&
+                         incoming().joinedAt <= request.time &&
+                         incoming().keys().hasAll(['userId', 'joinedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'joinedAt']);
+
+        allow update: if false;
+        allow delete: if isSignedIn() && isValidId(roomId) && isValidId(memberUid) && (request.auth.uid == memberUid || isAdmin());
+      }
+
+      match /messages/{messageId} {
+        allow get: if isSignedIn() && isValidId(roomId) && isValidId(messageId) && (existing().isPublicRoom == true || isAdmin());
+        allow list: if isSignedIn() && (existing().isPublicRoom == true || isBootstrappedAdmin());
+
+        allow create: if isSignedIn() &&
+                         isValidId(roomId) &&
+                         isValidId(messageId) &&
+                         isValidRoomMessage(incoming(), roomId) &&
+                         (incoming().isAdminPost == false || isAdmin()) &&
+                         incoming().isPublicRoom == get(/databases/$(database)/documents/community_rooms/$(roomId)).data.isPublic &&
+                         (
+                           isAdmin() || (
+                             get(/databases/$(database)/documents/community_rooms/$(roomId)).data.roomType == 'group' &&
+                             get(/databases/$(database)/documents/community_rooms/$(roomId)).data.adminsOnlyPosting == false &&
+                             exists(/databases/$(database)/documents/community_rooms/$(roomId)/memberships/$(request.auth.uid))
+                           )
+                         ) &&
+                         incoming().keys().hasAll([
+                           'roomId', 'isPublicRoom', 'senderUid', 'senderAlias',
+                           'isAdminPost', 'ciphertextBase64', 'ivBase64',
+                           'payloadType', 'approxBytes', 'createdAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'roomId', 'isPublicRoom', 'senderUid', 'senderAlias',
+                           'isAdminPost', 'ciphertextBase64', 'ivBase64',
+                           'payloadType', 'approxBytes', 'createdAt'
+                         ]);
+
+        allow update: if false;
+        allow delete: if isSignedIn() && isValidId(roomId) && isValidId(messageId) && (existing().senderUid == request.auth.uid || isAdmin());
+      }
+    }
+
+    // E2EE 24-hour Status Updates
+    match /status_updates/{statusId} {
+      allow get: if isSignedIn() && isValidId(statusId) && (
+        existing().isPublic == true ||
+        request.auth.uid in existing().allowedUids ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        existing().isPublic == true ||
+        request.auth.uid in existing().allowedUids ||
+        isBootstrappedAdmin()
+      );
+
+      allow create: if isSignedIn() &&
+                       isValidId(statusId) &&
+                       isValidStatusUpdate(incoming()) &&
+                       incoming().authorUid == request.auth.uid &&
+                       request.auth.uid in incoming().allowedUids &&
+                       incoming().viewCount == 0 &&
+                       (incoming().isOfficialBroadcast == false || isAdmin()) &&
+                       incoming().keys().hasAll([
+                         'authorUid', 'authorLabel', 'isOfficialBroadcast', 'isPublic',
+                         'allowedUids', 'wrappedKeys', 'authorPublicKey',
+                         'ciphertextBase64', 'ivBase64', 'accentHex', 'hasImage',
+                         'approxBytes', 'viewCount', 'expiresAt', 'createdAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'authorUid', 'authorLabel', 'isOfficialBroadcast', 'isPublic',
+                         'allowedUids', 'wrappedKeys', 'authorPublicKey',
+                         'ciphertextBase64', 'ivBase64', 'accentHex', 'hasImage',
+                         'approxBytes', 'viewCount', 'expiresAt', 'createdAt'
+                       ]);
+
+      allow update: if isSignedIn() &&
+                       isValidId(statusId) &&
+                       isValidStatusUpdate(incoming()) &&
+                       incoming().authorUid == existing().authorUid &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['viewCount']) &&
+                       incoming().viewCount == existing().viewCount + 1 &&
+                       (existing().isPublic == true || request.auth.uid in existing().allowedUids || isAdmin());
+
+      allow delete: if isSignedIn() && isValidId(statusId) && (existing().authorUid == request.auth.uid || isAdmin());
     }
   }
 }

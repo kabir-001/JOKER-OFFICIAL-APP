@@ -34,6 +34,10 @@ data class TargetPaper(
   val durationText: String = "",
   val instructions: String = "",
   val externalPdfUrl: String = "",
+  val pdfFileName: String = "",
+  val pdfSizeBytes: Long = 0L,
+  val pdfPageCount: Long = 0L,
+  val pdfBase64: String = "",
   val sections: List<PaperSection> = emptyList(),
   val status: String = STATUS_PUBLISHED,
   val createdByUid: String = "",
@@ -42,6 +46,9 @@ data class TargetPaper(
 ) {
   val totalQuestionCount: Int
     get() = sections.sumOf { it.questions.size }
+
+  val hasEmbeddedPdf: Boolean
+    get() = pdfBase64.isNotBlank()
 
   val isPublished: Boolean
     get() = status == STATUS_PUBLISHED

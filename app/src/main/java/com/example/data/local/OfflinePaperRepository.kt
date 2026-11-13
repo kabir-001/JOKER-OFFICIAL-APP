@@ -36,7 +36,16 @@ class OfflinePaperRepository(private val context: Context) {
         require(paper.id.isNotBlank()) { "Paper ID cannot be blank" }
         val papersDir = File(appContext.filesDir, "papers").apply { mkdirs() }
         val pdfFile = File(papersDir, "${paper.id}.pdf")
-        generatePrintablePdf(paper, pdfFile)
+        if (paper.pdfBase64.isNotBlank()) {
+          val decodedBytes = android.util.Base64.decode(paper.pdfBase64, android.util.Base64.DEFAULT)
+          if (decodedBytes.isNotEmpty()) {
+            FileOutputStream(pdfFile).use { it.write(decodedBytes) }
+          } else {
+            generatePrintablePdf(paper, pdfFile)
+          }
+        } else {
+          generatePrintablePdf(paper, pdfFile)
+        }
 
         val sectionsJson = PaperSerialization.sectionsToJson(paper.sections)
         val byteSize = pdfFile.length().coerceAtLeast(sectionsJson.toByteArray().size.toLong())

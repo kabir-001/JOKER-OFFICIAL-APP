@@ -4,6 +4,7 @@
     <string name="auth_headline">Your Exam Target Papers, Always Ready</string>
     <string name="auth_subtitle">Access verified target papers uploaded by your instructor, download for 100% offline study, and connect on WhatsApp.</string>
     <string name="nav_papers">Papers</string>
+    <string name="nav_chats">Chats</string>
     <string name="nav_offline">Offline</string>
     <string name="nav_gemini">Gemini AI</string>
     <string name="nav_help">Help &amp; WA</string>

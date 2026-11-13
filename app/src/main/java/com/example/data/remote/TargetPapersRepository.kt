@@ -128,6 +128,12 @@ class TargetPapersRepository(private val db: FirebaseFirestore) {
       "status" to if (paper.status == TargetPaper.STATUS_DRAFT) TargetPaper.STATUS_DRAFT else TargetPaper.STATUS_PUBLISHED,
       "updatedAt" to FieldValue.serverTimestamp(),
     )
+    if (paper.pdfFileName.isNotBlank() || paper.pdfBase64.isNotBlank() || paper.pdfSizeBytes > 0L || paper.pdfPageCount > 0L) {
+      payload["pdfFileName"] = paper.pdfFileName.trim().take(180)
+      payload["pdfSizeBytes"] = paper.pdfSizeBytes.coerceIn(0L, 52428800L)
+      payload["pdfPageCount"] = paper.pdfPageCount.coerceIn(0L, 500L)
+      payload["pdfBase64"] = paper.pdfBase64.take(850000)
+    }
 
     return try {
       if (isNew) {

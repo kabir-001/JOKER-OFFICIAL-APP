@@ -61,7 +61,13 @@ class TargetPapersRepositoryRuleTest : FirestoreEmulatorTestBase() {
     signInTestUser(ADMIN_EMAIL, markVerified = true)
     val repo = TargetPapersRepository(firestore)
 
-    val createResult = withTimeout(DEFAULT_TIMEOUT_MS) { repo.savePaper(samplePaper(TargetPaper.STATUS_PUBLISHED)) }
+    val pdfPaper = samplePaper(TargetPaper.STATUS_PUBLISHED).copy(
+      pdfFileName = "physics_target_2026.pdf",
+      pdfSizeBytes = 1024L,
+      pdfPageCount = 3L,
+      pdfBase64 = "JVBERi0xLjQKJSB0ZXN0IHBkZg==",
+    )
+    val createResult = withTimeout(DEFAULT_TIMEOUT_MS) { repo.savePaper(pdfPaper) }
     assertTrue("Admin savePaper failed: ${createResult.exceptionOrNull()}", createResult.isSuccess)
     val paperId = createResult.getOrThrow()
 
@@ -70,7 +76,10 @@ class TargetPapersRepositoryRuleTest : FirestoreEmulatorTestBase() {
     val observed = withTimeout(FLOW_TIMEOUT_MS) {
       studentRepo.observePublishedPapers().first { list -> list.any { it.id == paperId } }
     }
-    assertTrue(observed.any { it.id == paperId })
+    val saved = observed.first { it.id == paperId }
+    assertEquals("physics_target_2026.pdf", saved.pdfFileName)
+    assertEquals(3L, saved.pdfPageCount)
+    assertEquals("JVBERi0xLjQKJSB0ZXN0IHBkZg==", saved.pdfBase64)
   }
 
   @Test

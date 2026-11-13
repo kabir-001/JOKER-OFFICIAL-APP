@@ -57,10 +57,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.graphics.Bitmap
+import android.graphics.Color as AndroidColor
+import android.graphics.pdf.PdfRenderer
+import android.os.ParcelFileDescriptor
+import android.util.Base64
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.ProduceStateScope
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import com.example.data.model.TargetPaper
 import com.example.ui.components.ExternalLinkHelpers
 import com.example.ui.theme.WhatsAppGreen
+import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -277,6 +291,16 @@ fun PaperReaderScreen(
           }
         }
 
+        if (paper.hasEmbeddedPdf) {
+          item {
+            EmbeddedPdfPreviewSection(
+              paperId = paper.id,
+              fileName = paper.pdfFileName.ifBlank { "${paper.title}.pdf" },
+              pdfBase64 = paper.pdfBase64,
+            )
+          }
+        }
+
         items(paper.sections) { section ->
           Card(
             shape = RoundedCornerShape(18.dp),
@@ -381,6 +405,99 @@ fun PaperReaderScreen(
         }
 
         item { Spacer(modifier = Modifier.height(24.dp)) }
+      }
+    }
+  }
+}
+
+@Composable
+private fun EmbeddedPdfPreviewSection(
+  paperId: String,
+  fileName: String,
+  pdfBase64: String,
+) {
+  val context = LocalContext.current
+  val pages by produceState<List<Bitmap>>(initialValue = emptyList(), key1 = paperId, key2 = pdfBase64) {
+    value = withContext(Dispatchers.IO) {
+      runCatching {
+        val bytes = Base64.decode(pdfBase64, Base64.DEFAULT)
+        if (bytes.isEmpty()) return@runCatching emptyList()
+        val tempFile = File.createTempFile("preview_$paperId", ".pdf", context.cacheDir)
+        try {
+          tempFile.writeBytes(bytes)
+          val bitmaps = mutableListOf<Bitmap>()
+          ParcelFileDescriptor.open(tempFile, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
+            PdfRenderer(pfd).use { renderer ->
+              val maxPages = renderer.pageCount.coerceAtMost(25)
+              for (i in 0 until maxPages) {
+                renderer.openPage(i).use { page ->
+                  val scale = (960f / page.width.coerceAtLeast(1)).coerceIn(1f, 2f)
+                  val w = (page.width * scale).toInt().coerceAtLeast(200)
+                  val h = (page.height * scale).toInt().coerceAtLeast(280)
+                  val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                  bmp.eraseColor(AndroidColor.WHITE)
+                  page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                  bitmaps.add(bmp)
+                }
+              }
+            }
+          }
+          bitmaps
+        } finally {
+          tempFile.delete()
+        }
+      }.getOrDefault(emptyList())
+    }
+  }
+
+  Card(
+    shape = RoundedCornerShape(18.dp),
+    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+  ) {
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(16.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+      ) {
+        Icon(
+          imageVector = Icons.Rounded.PictureAsPdf,
+          contentDescription = null,
+          tint = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+          text = "PDF Document ($fileName)",
+          style = MaterialTheme.typography.titleMedium,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+        )
+      }
+      if (pages.isEmpty()) {
+        Text(
+          text = "Rendering PDF preview...",
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+      } else {
+        pages.forEachIndexed { idx, bmp ->
+          Text(
+            text = "Page ${idx + 1} of ${pages.size}",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+          )
+          Image(
+            bitmap = bmp.asImageBitmap(),
+            contentDescription = "PDF page ${idx + 1}",
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(10.dp)),
+          )
+        }
       }
     }
   }
