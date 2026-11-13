@@ -1,0 +1,204 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Shared Primitives ---
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() &&
+             'email_verified' in request.auth.token &&
+             'email' in request.auth.token &&
+             request.auth.token.email_verified == true &&
+             request.auth.token.email in [
+               'vden4060@gmail.com',
+               'karachieduofficial@gmail.com',
+               'kbir94720@gmail.com',
+               'joker94720@gmail.com'
+             ];
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        isBootstrappedAdmin() ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // --- Entity Validation Helpers ---
+    function isValidTargetPaper(data) {
+      return data.title is string && data.title.size() >= 2 && data.title.size() <= 140 &&
+             data.subject is string && data.subject.size() >= 1 && data.subject.size() <= 60 &&
+             data.classLevel is string && data.classLevel.size() >= 1 && data.classLevel.size() <= 40 &&
+             data.examTerm is string && data.examTerm.size() <= 80 &&
+             data.totalMarks is int && data.totalMarks >= 0 && data.totalMarks <= 1000 &&
+             data.durationText is string && data.durationText.size() <= 40 &&
+             data.instructions is string && data.instructions.size() <= 1500 &&
+             (!('externalPdfUrl' in data) || data.externalPdfUrl == null || (data.externalPdfUrl is string && data.externalPdfUrl.size() <= 500)) &&
+             data.sections is list && data.sections.size() <= 20 &&
+             (data.sections.size() == 0 || (data.sections[0] is map && data.sections[0].heading is string && data.sections[0].heading.size() <= 120)) &&
+             data.status in ['published', 'draft'] &&
+             data.createdByUid is string && data.createdByUid.size() >= 1 && data.createdByUid.size() <= 128 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidSupportConfig(data) {
+      return data.isPublic is bool &&
+             data.whatsappChannelName is string && data.whatsappChannelName.size() <= 80 &&
+             data.whatsappChannelUrl is string && data.whatsappChannelUrl.size() <= 300 &&
+             (!('sscGroupName' in data) || data.sscGroupName == null || (data.sscGroupName is string && data.sscGroupName.size() <= 80)) &&
+             (!('sscGroupUrl' in data) || data.sscGroupUrl == null || (data.sscGroupUrl is string && data.sscGroupUrl.size() <= 300)) &&
+             (!('hscGroupName' in data) || data.hscGroupName == null || (data.hscGroupName is string && data.hscGroupName.size() <= 80)) &&
+             (!('hscGroupUrl' in data) || data.hscGroupUrl == null || (data.hscGroupUrl is string && data.hscGroupUrl.size() <= 300)) &&
+             data.supportNote is string && data.supportNote.size() <= 400 &&
+             data.helpContacts is list && data.helpContacts.size() <= 15 &&
+             (data.helpContacts.size() == 0 || (
+               data.helpContacts[0] is map &&
+               data.helpContacts[0].label is string && data.helpContacts[0].label.size() <= 60 &&
+               data.helpContacts[0].phoneNumber is string && data.helpContacts[0].phoneNumber.size() <= 30
+             )) &&
+             data.updatedByUid is string && data.updatedByUid.size() >= 1 && data.updatedByUid.size() <= 128 &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidAdminEntry(data) {
+      return data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() >= 3 && data.email.size() <= 120 &&
+             data.addedAt is timestamp && data.addedAt <= request.time;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             (!('preferredClass' in data) || data.preferredClass == null || (data.preferredClass is string && data.preferredClass.size() <= 40)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // --- Collection Rules ---
+    match /target_papers/{paperId} {
+      allow get: if isSignedIn() && isValidId(paperId) && (existing().status == 'published' || isAdmin());
+      allow list: if isSignedIn() && (existing().status == 'published' || isBootstrappedAdmin());
+
+      allow create: if isAdmin() &&
+                       isValidId(paperId) &&
+                       isValidTargetPaper(incoming()) &&
+                       incoming().createdByUid == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'title', 'subject', 'classLevel', 'examTerm', 'totalMarks',
+                         'durationText', 'instructions', 'sections', 'status',
+                         'createdByUid', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'title', 'subject', 'classLevel', 'examTerm', 'totalMarks',
+                         'durationText', 'instructions', 'externalPdfUrl', 'sections',
+                         'status', 'createdByUid', 'createdAt', 'updatedAt'
+                       ]);
+
+      allow update: if isAdmin() &&
+                       isValidId(paperId) &&
+                       isValidTargetPaper(incoming()) &&
+                       incoming().createdByUid == existing().createdByUid &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'title', 'subject', 'classLevel', 'examTerm', 'totalMarks',
+                         'durationText', 'instructions', 'externalPdfUrl', 'sections',
+                         'status', 'updatedAt'
+                       ]);
+
+      allow delete: if isAdmin() && isValidId(paperId);
+    }
+
+    match /app_config/{configId} {
+      allow get: if isSignedIn() && isValidId(configId) && (resource == null || existing().isPublic == true || isAdmin());
+      allow list: if isSignedIn() && (existing().isPublic == true || isBootstrappedAdmin());
+
+      allow create: if isAdmin() &&
+                       isValidId(configId) &&
+                       isValidSupportConfig(incoming()) &&
+                       incoming().updatedByUid == request.auth.uid &&
+                       incoming().keys().hasAll([
+                         'isPublic', 'whatsappChannelName', 'whatsappChannelUrl',
+                         'supportNote', 'helpContacts', 'updatedByUid', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'isPublic', 'whatsappChannelName', 'whatsappChannelUrl',
+                         'sscGroupName', 'sscGroupUrl', 'hscGroupName', 'hscGroupUrl',
+                         'supportNote', 'helpContacts', 'updatedByUid', 'updatedAt'
+                       ]);
+
+      allow update: if isAdmin() &&
+                       isValidId(configId) &&
+                       isValidSupportConfig(incoming()) &&
+                       incoming().updatedByUid == request.auth.uid &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'isPublic', 'whatsappChannelName', 'whatsappChannelUrl',
+                         'sscGroupName', 'sscGroupUrl', 'hscGroupName', 'hscGroupUrl',
+                         'supportNote', 'helpContacts', 'updatedByUid', 'updatedAt'
+                       ]);
+
+      allow delete: if isAdmin() && isValidId(configId);
+    }
+
+    match /admins/{uid} {
+      allow get: if isSignedIn() && isValidId(uid) && request.auth.uid == uid;
+      allow list: if isBootstrappedAdmin();
+
+      allow create: if isBootstrappedAdmin() &&
+                       isValidId(uid) &&
+                       isValidAdminEntry(incoming()) &&
+                       incoming().uid == uid &&
+                       incoming().keys().hasAll(['uid', 'email', 'addedAt']) &&
+                       incoming().keys().hasOnly(['uid', 'email', 'addedAt']);
+
+      allow update: if isBootstrappedAdmin() &&
+                       isValidId(uid) &&
+                       isValidAdminEntry(incoming()) &&
+                       incoming().uid == existing().uid &&
+                       incoming().addedAt == existing().addedAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['email']);
+
+      allow delete: if isBootstrappedAdmin() && isValidId(uid);
+    }
+
+    match /users/{userId} {
+      allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().keys().hasAll(['userId', 'displayName', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'displayName', 'preferredClass', 'createdAt', 'updatedAt']);
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'preferredClass', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+  }
+}

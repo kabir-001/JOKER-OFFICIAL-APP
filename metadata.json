@@ -1,0 +1,6 @@
+{
+  "name": "Joker Official",
+  "description": "Joker Official SSC & HSC target papers hub with Admin upload panel, offline reading, WhatsApp channel & session groups, and clickable help lines.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

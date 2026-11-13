@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">Joker Official</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="auth_headline">Your Exam Target Papers, Always Ready</string>
+    <string name="auth_subtitle">Access verified target papers uploaded by your instructor, download for 100% offline study, and connect on WhatsApp.</string>
+    <string name="nav_papers">Papers</string>
+    <string name="nav_offline">Offline</string>
+    <string name="nav_gemini">Gemini AI</string>
+    <string name="nav_help">Help &amp; WA</string>
+    <string name="nav_admin">Admin</string>
+    <string name="action_download_offline">Download Offline</string>
+    <string name="label_offline_ready">Offline Ready</string>
+    <string name="action_join_whatsapp_channel">Join WhatsApp Channel</string>
+    <string name="action_call_now">Call</string>
+    <string name="action_whatsapp_chat">WhatsApp</string>
+    <string name="empty_papers_title">No Target Papers Yet</string>
+    <string name="empty_papers_subtitle">New target papers uploaded from the Admin Panel will appear here automatically.</string>
+    <string name="empty_offline_title">No Offline Papers Saved</string>
+    <string name="empty_offline_subtitle">Tap Download on any target paper to save it here and read anytime without internet.</string>
+</resources>

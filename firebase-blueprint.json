@@ -1,0 +1,210 @@
+{
+  "entities": {
+    "TargetPaper": {
+      "title": "TargetPaper",
+      "description": "An exam target paper created and published by the admin, containing structured sections and questions for students to view and download offline.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Display title of the target paper"
+        },
+        "subject": {
+          "type": "string",
+          "description": "Academic subject name (e.g. Physics, Mathematics)"
+        },
+        "classLevel": {
+          "type": "string",
+          "description": "Class, grade, or exam level (e.g. 10th Class, MDCAT)"
+        },
+        "examTerm": {
+          "type": "string",
+          "description": "Exam session or term (e.g. Annual Board 2026)"
+        },
+        "totalMarks": {
+          "type": "integer",
+          "description": "Total marks for the paper"
+        },
+        "durationText": {
+          "type": "string",
+          "description": "Allowed exam duration label"
+        },
+        "instructions": {
+          "type": "string",
+          "description": "General exam instructions for students"
+        },
+        "externalPdfUrl": {
+          "type": "string",
+          "description": "Optional external PDF or resource URL"
+        },
+        "sections": {
+          "type": "array",
+          "description": "Structured exam sections containing questions"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["published", "draft"],
+          "description": "Publication visibility status"
+        },
+        "createdByUid": {
+          "type": "string",
+          "description": "Firebase UID of the admin who created the paper"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp written via FieldValue.serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp written via FieldValue.serverTimestamp()"
+        }
+      },
+      "required": [
+        "title",
+        "subject",
+        "classLevel",
+        "examTerm",
+        "totalMarks",
+        "durationText",
+        "instructions",
+        "sections",
+        "status",
+        "createdByUid",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SupportConfig": {
+      "title": "SupportConfig",
+      "description": "Admin-managed WhatsApp channel link and clickable helpline phone numbers displayed to all students.",
+      "type": "object",
+      "properties": {
+        "isPublic": {
+          "type": "boolean",
+          "description": "Whether the support configuration is visible to signed-in students"
+        },
+        "whatsappChannelName": {
+          "type": "string",
+          "description": "Display name of the WhatsApp Channel"
+        },
+        "whatsappChannelUrl": {
+          "type": "string",
+          "description": "Clickable HTTPS URL of the WhatsApp Channel"
+        },
+        "sscGroupName": {
+          "type": "string",
+          "description": "Display name of the SSC (IX/X) WhatsApp session group"
+        },
+        "sscGroupUrl": {
+          "type": "string",
+          "description": "Clickable invite link for the SSC (IX/X) WhatsApp session group"
+        },
+        "hscGroupName": {
+          "type": "string",
+          "description": "Display name of the HSC (XI/XII) WhatsApp session group"
+        },
+        "hscGroupUrl": {
+          "type": "string",
+          "description": "Clickable invite link for the HSC (XI/XII) WhatsApp session group"
+        },
+        "supportNote": {
+          "type": "string",
+          "description": "Helpful message shown above support numbers"
+        },
+        "helpContacts": {
+          "type": "array",
+          "description": "List of clickable help phone contact entries"
+        },
+        "updatedByUid": {
+          "type": "string",
+          "description": "Firebase UID of the admin who last updated support settings"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp written via FieldValue.serverTimestamp()"
+        }
+      },
+      "required": [
+        "isPublic",
+        "whatsappChannelName",
+        "whatsappChannelUrl",
+        "supportNote",
+        "helpContacts",
+        "updatedByUid",
+        "updatedAt"
+      ]
+    },
+    "AdminEntry": {
+      "title": "AdminEntry",
+      "description": "Trusted admin role record managed by the bootstrapped owner.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Admin Firebase UID"
+        },
+        "email": {
+          "type": "string",
+          "description": "Admin email address"
+        },
+        "addedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when admin entry was created"
+        }
+      },
+      "required": ["uid", "email", "addedAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Student user preferences stored privately per authenticated user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated user UID"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name"
+        },
+        "preferredClass": {
+          "type": "string",
+          "description": "Preferred class filter"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp"
+        }
+      },
+      "required": ["userId", "displayName", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/target_papers/{paperId}": {
+      "schema": { "$ref": "#/entities/TargetPaper" },
+      "description": "Published target papers readable by signed-in students; drafts and all writes restricted to admins."
+    },
+    "/app_config/{configId}": {
+      "schema": { "$ref": "#/entities/SupportConfig" },
+      "description": "Support settings document holding WhatsApp channel URL and clickable help numbers."
+    },
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminEntry" },
+      "description": "Admin allowlist entries managed by the bootstrapped admin."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Per-user profile and study preferences."
+    }
+  }
+}
